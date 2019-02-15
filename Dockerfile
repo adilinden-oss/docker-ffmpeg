@@ -1,22 +1,23 @@
-FROM balenalib/raspberry-pi-debian:stretch as builder
+FROM debian:jessie-slim as builder
 
 RUN apt-get update -qy && apt-get -qy install \
-        build-essential git nasm \
-        libomxil-bellagio-dev
+        build-essential pkg-config git nasm \
+        libx264-dev
 
 WORKDIR /root
 RUN git clone https://github.com/FFmpeg/FFmpeg.git --depth 1
 
 WORKDIR /root/FFmpeg
-RUN ./configure --arch=armel --target-os=linux --enable-gpl --enable-omx --enable-omx-rpi --enable-nonfree
+RUN ./configure --target-os=linux --enable-gpl --enable-nonfree --enable-libx264
 RUN make -j$(nproc)
 RUN make install
 
 ###
 
-FROM balenalib/raspberry-pi-debian:stretch
+FROM debian:jessie-slim
 
-RUN apt-get update && apt-get install -qy libraspberrypi-bin libomxil-bellagio0 \
+RUN apt-get update \
+    && apt-get -qy install libx264-142 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
