@@ -2,13 +2,31 @@ FROM debian:jessie-slim as builder
 
 RUN apt-get update -qy && apt-get -qy install \
         build-essential pkg-config git nasm \
-        libx264-dev libssl-dev
+        libx264-dev libssl-dev libfontconfig1-dev
 
 WORKDIR /root
 RUN git clone https://github.com/FFmpeg/FFmpeg.git --depth 1
 
 WORKDIR /root/FFmpeg
-RUN ./configure --target-os=linux --enable-gpl --enable-nonfree --enable-libx264 --enable-openssl
+
+#
+# To enable h262
+#   packages:  libx264-dev
+#   configure: --enable-libx264
+#
+# To enable ssl
+#   packages:  libssl-dev
+#   configure: --enable-openssl
+#
+# To enable drawtext filter
+#   packages:  libfontconfig1-dev
+#   configure: --enable-libfreetype --enable-libfontconfig
+#
+RUN ./configure \
+    --target-os=linux --enable-gpl --enable-nonfree \
+    --enable-libx264 \
+    --enable-openssl \
+    --enable-libfreetype --enable-libfontconfig
 RUN make -j$(nproc)
 RUN make install
 
@@ -18,7 +36,7 @@ FROM debian:jessie-slim
 
 RUN apt-get update \
     && apt-get -qy install \
-        libx264-142 libssl1.0.0 \
+        libx264-142 libssl1.0.0 libfontconfig1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
