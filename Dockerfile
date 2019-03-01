@@ -1,4 +1,4 @@
-FROM debian:jessie-slim as builder
+FROM debian:stretch-slim as builder
 
 RUN apt-get update -qy && apt-get -qy install \
         build-essential pkg-config git nasm \
@@ -32,11 +32,11 @@ RUN make install
 
 ###
 
-FROM debian:jessie-slim
+FROM debian:stretch-slim
 
 RUN apt-get update \
     && apt-get -qy install \
-        libx264-142 libssl1.0.0 libfontconfig1 \
+        libx264-148 libssl1.1 libfontconfig1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
