@@ -1,49 +1,85 @@
-FROM debian:stretch-slim as builder
+FROM alpine:3.9 AS builder
 
-RUN apt-get update -qy && apt-get -qy install \
-        build-essential pkg-config git nasm \
-        libx264-dev libssl-dev libfontconfig1-dev
+ARG FFMPEG_TAG=n4.1.1
+
+# Get build deps
+RUN apk add --no-cache --update \
+        build-base \
+        git \
+        nasm \
+        pkgconf \
+        coreutils \
+        lame-dev \
+        libogg-dev \
+        libvorbis-dev \
+        libass-dev \
+        libvpx-dev \
+        libwebp-dev \
+        libtheora-dev \
+        opus-dev \
+        rtmpdump-dev \
+        x264-dev \
+        x265-dev \
+        openssl-dev \
+        freetype-dev
+
+# Get fdk-aac
+RUN echo http://dl-cdn.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
+        apk add --no-cache --update fdk-aac-dev
 
 WORKDIR /root
-RUN git clone https://github.com/FFmpeg/FFmpeg.git --depth 1
+RUN git clone --depth 1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git
 
 WORKDIR /root/FFmpeg
-
-#
-# To enable h262
-#   packages:  libx264-dev
-#   configure: --enable-libx264
-#
-# To enable ssl
-#   packages:  libssl-dev
-#   configure: --enable-openssl
-#
-# To enable drawtext filter
-#   packages:  libfontconfig1-dev
-#   configure: --enable-libfreetype --enable-libfontconfig
-#
 RUN ./configure \
-    --target-os=linux --enable-gpl --enable-nonfree \
-    --enable-libx264 \
-    --enable-openssl \
-    --enable-libfreetype --enable-libfontconfig
+        --target-os=linux \
+        --enable-gpl \
+        --enable-nonfree \
+        --enable-version3 \
+        --enable-libfdk-aac \
+        --enable-libmp3lame \
+        --enable-libvorbis \
+        --enable-libass \
+        --enable-libvpx \
+        --enable-libwebp \
+        --enable-libtheora \
+        --enable-libopus \
+        --enable-librtmp \
+        --enable-libx264 \
+        --enable-libx265 \
+        --enable-openssl \
+        --enable-libfreetype \
+        --disable-debug \
+        --disable-doc \
+        --disable-ffplay \
+        --extra-libs="-lpthread -lm" 
 RUN make -j$(nproc)
 RUN make install
 
 ###
 
-FROM debian:stretch-slim
+FROM alpine:3.9
 
-RUN apt-get update \
-    && apt-get -qy install \
-        libx264-148 libssl1.1 libfontconfig1 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apk add --no-cache --update \
+        lame \
+        libogg \
+        libvorbis \
+        libass \
+        libvpx \
+        libwebp \
+        libtheora \
+        opus \
+        rtmpdump \
+        x264-dev \
+        x265-dev \
+        libssl1.1 \
+        ca-certificates \
+        freetype
 
 WORKDIR /root
 COPY --from=builder /usr/local/bin/ /usr/local/bin
 COPY --from=builder /usr/local/lib/ /usr/local/lib
 COPY --from=builder /usr/local/share/ffmpeg/ /usr/local/share/ffmpeg
-COPY --from=builder /usr/local/share/man/ /usr/local/share/man
+COPY --from=builder /usr/lib/libfdk-aac.so.2 /usr/lib/libfdk-aac.so.2
 
-CMD ["/bin/bash"]
+CMD ["/bin/ash"]
